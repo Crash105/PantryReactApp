@@ -3,7 +3,7 @@
 import { ChatOpenAI } from "@langchain/openai";
 
 const chatModel = new ChatOpenAI({
-    apiKey: process.env.OPENAI_API_KEY 
+    apiKey: "sk-proj-uKq9N4zxJMBykpSK0UaHT3BlbkFJkLU23FLwXpMkUYOjyDdW"
 });
 
 export async function generateRecipes(prompt) {
