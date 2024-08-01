@@ -6,6 +6,8 @@ import { collection, query, getDocs, setDoc, doc, deleteDoc, getDoc  } from "fir
 import { useEffect, useState, useRef } from "react";
 import Modal from '@mui/material/Modal';
 import TextField from '@mui/material/TextField';
+import { generateRecipes } from "./action";
+import { green } from "@mui/material/colors";
 
 
 
@@ -42,8 +44,19 @@ export default function Home() {
   const [items, setItems] = useState("")
   const [pantry, setPantry] = useState([])
   const [searchQuery, setSearchQuery] = useState('');
+  const [recipes, setRecipes] = useState([]);
   const inputRef = useRef()
-
+  
+  const onSubmit = async () => {
+    try {
+      let r = await generateRecipes(pantry);
+      console.log(r);
+      setRecipes(r);
+      
+    } catch (error) {
+      console.error("Error generating recipes:", error);
+    }
+  };
   
 
   const filteredItems = pantry.filter(item => 
@@ -157,7 +170,7 @@ export default function Home() {
   
       </Box>
     
-      <Stack width = "800px" height = "300px" spacing = {2} overflow= {'auto'} >
+      <Stack width = "800px" height = "200px" spacing = {2} overflow= {'auto'} >
      {filteredItems.map(({name, count}) => (
       
     <Box width = "100%" minheight = "150px" display = {'flex'}  alignItems={"center"} bgcolor={"forestgreen"} key={name}
@@ -179,8 +192,36 @@ export default function Home() {
 
      ))}
       </Stack>
+      
+
+  
+  
+  </Box>
+  <Button variant="contained" onClick = {onSubmit}>Generate Recipe</Button>
+      <Stack width="800px" height="200px" spacing={2} overflow="auto"  direction={"column"} color={green} >
+    { recipes.length > 0 && 
+        recipes.map((recipe, index) => (
+    <Box
+      width="100%"
+      minHeight="150px"
+      display="flex"
+      alignItems="center"
+      bgcolor="forestgreen"
+      key={index}
+      style={{ justifyContent: 'space-between' }}
+    >
+      <Typography variant="h5" color="#333" textAlign="center">
+        {recipe.name}
+      </Typography>
+      <Typography variant="h7" color="#333" textAlign="center">
+        {recipe.description}
+      </Typography>
+     
      
     </Box>
+  ))}
+</Stack>
+
     </Box>
   );
 }
