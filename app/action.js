@@ -13,7 +13,7 @@ export async function generateRecipes(prompt) {
    
 
     const pantryNames = prompt.map(item => item.name).join(", ");
-    const fullPrompt = `Generate one recipe for ${pantryNames} dish. The output should be in JSON array and each object should contain a recipe name field named 'name', description field named 'description'. Only one recipe with one name and one description. You dont have to use all the ingredients and be creative `;
+    const fullPrompt = `Generate two recipe for ${pantryNames} dish. The output should be in JSON array and each object should contain a recipe name field named 'name', description field named 'description'. Only two recipes with two name and two description. You dont have to use all the ingredients but if you make ingredients ensure ingredients exist in pantry. And be creative with recipes, nothing boring `;
     
     try {
         const response = await chatModel.invoke(fullPrompt);

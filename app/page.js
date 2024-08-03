@@ -8,6 +8,10 @@ import Modal from '@mui/material/Modal';
 import TextField from '@mui/material/TextField';
 import { generateRecipes } from "./action";
 import { green } from "@mui/material/colors";
+import {Camera} from "react-camera-pro";
+import Card from '@mui/material/Card';
+import CardActions from '@mui/material/CardActions';
+import CardContent from '@mui/material/CardContent';
 
 
 
@@ -24,12 +28,28 @@ const style = {
 };
 
 
+const style1 = {
+  position: "absolute",
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: "800px",
+  height: "600px",
+  
+  bgcolor: 'background.paper',
+
+  display: "flex",
+  flexDirection: "column",
+  
+};
 
 
 
 
 
 export default function Home() {
+
+  
 
 
   function handleInputChange(event) {
@@ -46,6 +66,10 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [recipes, setRecipes] = useState([]);
   const inputRef = useRef()
+  const camera = useRef(null);
+  const [image, setImage] = useState(null);
+
+
   
   const onSubmit = async () => {
     try {
@@ -132,15 +156,49 @@ export default function Home() {
 
   return (
    
-    <Box width = "100vw" height = "100vh" display = {'flex'} alignItems={'center'} justifyContent={'center'} flexDirection={'column'} gap = {2}   >
-      <Box justifyContent={"space-between"}>
-      <TextField id="outlined-basic" ref = {inputRef} label="Search" variant="outlined" minheight = "10px" value = {searchQuery} onChange={e => setSearchQuery(e.target.value)}   sx={{
-      width: '800px',
-      minheight: '10px'
-    }}/>
-     
-     </Box>
-      <Button variant="contained" onClick={handleOpen}>Add</Button>
+    <Box width = "100vw" height = "100vh" display = {'flex'} alignItems={'center'}  flexDirection={'column'} gap = {2}   >
+    <Typography
+  variant="h3"
+  sx={{
+    background: 'linear-gradient(90deg, #0000FF, #00FFFF)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    MozBackgroundClip: 'text',
+    MozTextFillColor: 'transparent',
+  }}
+>
+   AI Pantry React Web Application
+  </Typography>
+     <Box
+      justifyContent="space-between"
+      sx={{
+        width: {
+          xs: '100%', // 100% width on extra-small screens
+          sm: '80%',  // 80% width on small screens
+          md: '70%',  // 70% width on medium screens
+          lg: '60%',  // 60% width on large screens
+          xl: '50%'   // 50% width on extra-large screens
+        },
+      
+      }}
+    >
+      <TextField
+        id="outlined-basic"
+        ref={inputRef}
+        label="Search Items in Pantry"
+        variant="outlined"
+        value={searchQuery}
+        onChange={e => setSearchQuery(e.target.value)}
+        sx={{
+          width: '100%',  // take full width of the Box
+          minHeight: '10px',
+          border: '2px solid #333',
+          boxSizing: 'border-box',
+          borderRadius: '20px' ,
+        }}
+      />
+    </Box>
+      <Button variant="contained" onClick={handleOpen}>Add Items by Typing</Button>
       <Modal
   open={open}
   onClose={handleClose}
@@ -153,16 +211,42 @@ export default function Home() {
   </Typography>
   <Stack direction={"row"} spacing={2} >
   <TextField id="outlined-basic" label="Add" variant="outlined" minheight = "10px" value = {items} onChange={handleInputChange} ref = {inputRef} />
-  <Button variant="outlined" minheight = "10px"  onClick = {() => {
-      addItem(items)
-
-  }} >Add</Button>
-  </Stack>
+  <Button variant="outlined" minheight = "10px"  onClick = {() => { addItem(items)}} >Add</Button>
+   </Stack>
   </Box>
 </Modal>
-      <Box border = {'1px solid #333'}>
+
+
+
+
+
+
+
+<Box 
+  sx={{
+
+    border: '2px solid #333',
+    boxSizing: 'border-box',
+    borderRadius: '10px' ,
+
+    minheight: '100px',
+  
+    justifyContent: "space-between",
+    
+    width: {
+        xs: '100%', // 100% width on extra-small screens
+        sm: '80%',  // 80% width on small screens
+        md: '70%',  // 70% width on medium screens
+        lg: '60%',  // 60% width on large screens
+        xl: '50%'   // 50% width on extra-large screens
+      },
+       // center the box horizontally
+    }}
+  >
+
       
-      <Box width = "800px" height = "100px" bgcolor={'f0f0f0'} textAlign={'center'}  >
+      <Box bgcolor={'f0f0f0'} textAlign={'center'}>
+      
       <Typography variant={"h2"} color = {"#333"} textAlign={'center'}  >
         Pantry Items
         </Typography>
@@ -170,24 +254,43 @@ export default function Home() {
   
       </Box>
     
-      <Stack width = "800px" height = "200px" spacing = {2} overflow= {'auto'} >
+      <Stack  height = "200px" spacing = {2} overflow= {'auto'} >
      {filteredItems.map(({name, count}) => (
       
-    <Box width = "100%" minheight = "150px" display = {'flex'}  alignItems={"center"} bgcolor={"forestgreen"} key={name}
-    style={{ justifyContent: 'space-between' }}
+      <Box  sx={{
+      width: "100%" ,
+      minHeight: "150px" ,
+      display: "flex", 
+      alignItems: "center" ,
+      bgcolor: "lightblue" ,
+      justifyContent: "space-between" ,
+   
+    }}
+      key={name}
+    >
+    <Box sx = {{
 
-   >
-    
-      <Typography variant={"h3"} color = {"#333"} textAlign={'center'}  >
+display: "flex",
+flexDirection: "column",
+
+    }}>
+      <Typography variant={"h4"} color = {"#333"}  sx={{ fontWeight: 'bold' }}  >
       {
       name
-      }
+      } 
+     
 </Typography>
-<Typography variant={"h3"} color = {"#333"} textAlign={'center'}  >
-     Quantity:  {count}
+<Typography variant={"h8"} color = {"#333"} sx={{ fontStyle: 'italic' }}
+  >
+Quantity: {
+      count
+      } 
+     
 </Typography>
+</Box>
 
-<Button variant="contained" onClick = {() => DeleteItem(name)}>Delete</Button>
+
+<Button variant="contained"  sx={{ marginRight: '20px' }}   onClick = {() => DeleteItem(name)}>Delete</Button>
 </Box>
 
      ))}
@@ -197,31 +300,59 @@ export default function Home() {
   
   
   </Box>
-  <Button variant="contained" onClick = {onSubmit}>Generate Recipe</Button>
-      <Stack width="800px" height="200px" spacing={2} overflow="auto"  direction={"column"} color={green} >
+
+  <Button variant="contained" onClick = {onSubmit}>Generate Recipes</Button>
+
+<Box   
+
+      sx={{
+        width: {
+          xs: '100%', // 100% width on extra-small screens
+          sm: '80%',  // 80% width on small screens
+          md: '70%',  // 70% width on medium screens
+          lg: '60%',  // 60% width on large screens
+          xl: '50%'   // 50% width on extra-large screens
+        },
+      
+      }}>
+  
+      <Stack  height="200px" spacing={2}   direction={"row"} color={green} overflow={"auto"} >
     { recipes.length > 0 && 
         recipes.map((recipe, index) => (
     <Box
       width="100%"
-      minHeight="150px"
+      minHeight="250px"
       display="flex"
       alignItems="center"
-      bgcolor="forestgreen"
+      flexGrow={0}
+      
+      
       key={index}
-      style={{ justifyContent: 'space-between' }}
+      
+      
     >
-      <Typography variant="h5" color="#333" textAlign="center">
-        {recipe.name}
-      </Typography>
-      <Typography variant="h7" color="#333" textAlign="center">
-        {recipe.description}
-      </Typography>
+         <Card variant="outlined">
+        <CardContent>
+          
+          <Typography variant="h5" component="div" sx={{ fontWeight: 'bold' }}>
+          {recipe.name}
+          </Typography>
+          
+          <Typography variant="body2">
+            {recipe.description}
+         
+          </Typography>
+        </CardContent>
+       
+      </Card>
      
      
     </Box>
   ))}
 </Stack>
 
+    </Box>
+  
     </Box>
   );
 }
