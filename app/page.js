@@ -7,11 +7,19 @@ import { useEffect, useState, useRef } from "react";
 import Modal from '@mui/material/Modal';
 import TextField from '@mui/material/TextField';
 import { generateRecipes } from "./action";
+
 import { green } from "@mui/material/colors";
-import {Camera} from "react-camera-pro";
+
 import Card from '@mui/material/Card';
 import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
+import { Camera, IMAGE_TYPES } from 'react-html5-camera-photo';
+//import MyCameraComponent from "./MyCameraComponent";
+import { describeImage } from "./openai";
+import 'react-html5-camera-photo/build/css/index.css';
+
+
+
 
 
 
@@ -49,6 +57,14 @@ const style1 = {
 
 export default function Home() {
 
+  function handleTakePhoto (dataUri) {
+    // Do stuff with the photo...
+    console.log("HandTakePhoto Function Iniated")
+  
+
+    setUri(dataUri)
+    imageUpload1()
+  }
   
 
 
@@ -68,12 +84,25 @@ export default function Home() {
   const inputRef = useRef()
   const camera = useRef(null);
   const [image, setImage] = useState(null);
+  const [uri, setUri] = useState(null)
+
+  const [isOn, setIsOn] = useState(false);
+  const[finuri, setfinUru] = useState("")
+
+  const [isCameraOn, setIsCameraOn] = useState(false);
+
+
+  const startCamera = () => setIsCameraOn(true);
+  const stopCamera = () => setIsCameraOn(false);
+
 
 
   
   const onSubmit = async () => {
     try {
+      
       let r = await generateRecipes(pantry);
+    
       console.log(r);
       setRecipes(r);
       
@@ -86,7 +115,40 @@ export default function Home() {
   const filteredItems = pantry.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+
+
+  function handleCameraStart (stream) {
+    console.log('handleCameraStart');
+  }
+
+  function handleCameraStop () {
+    console.log('handleCameraStop');
+  }
+
+  const toggleCamera = () => {
+    setIsOn(!isOn);
+  };
   
+
+  const imageUpload1 =  async () => {
+    console.log("Image Upload")
+    console.log("URI:", uri); // 
+    
+    
+      try {
+
+        let result = await describeImage(uri);
+        console.log(result)
+        addItem(result)
+       
+        
+      
+      } catch {
+      
+      }
+    
+  }
 
 
 
@@ -113,8 +175,8 @@ export default function Home() {
   const addItem = async (item) => {
     const docRef = doc(collection(firestore, 'pantry'), item)
     const docSnap = await getDoc(docRef)
-    const value = inputRef.current.value
-    if(value === "") return
+    //const value = inputRef.current.value
+    //if(value === "") return
     if (docSnap.exists()) {
         const {count} = docSnap.data()
         await setDoc(docRef, {count: count + 1})
@@ -129,7 +191,7 @@ export default function Home() {
      
     }
 
-    inputRef.current.value = ""
+    //inputRef.current.value = ""
 
     await updatePantry()
    
@@ -212,16 +274,42 @@ export default function Home() {
   <Stack direction={"row"} spacing={2} >
   <TextField id="outlined-basic" label="Add" variant="outlined" minheight = "10px" value = {items} onChange={handleInputChange} ref = {inputRef} />
   <Button variant="outlined" minheight = "10px"  onClick = {() => { addItem(items)}} >Add</Button>
+ 
    </Stack>
   </Box>
 </Modal>
 
 
+{isOn && (<Camera
+    onTakePhoto={(dataUri) => {
+      if (dataUri) {
+        handleTakePhoto(dataUri);
+      } else {
+        handleTakePhoto("fruit")
+        // Handle the error appropriately
+      }
+    }}
+    
+    
+    
+  
+    imageType = {IMAGE_TYPES.JPG}
+    imageCompression = {0}
+   
+
+  
+  />
+)}
+
+<Button variant="outlined" minheight = "10px" onClick={toggleCamera}>
+        {isOn ? 'Turn Camera Off' : 'Turn Camera On'}
+      </Button>
+
+   
+ 
 
 
-
-
-
+    
 <Box 
   sx={{
 
@@ -244,7 +332,7 @@ export default function Home() {
     }}
   >
 
-      
+
       <Box bgcolor={'f0f0f0'} textAlign={'center'}>
       
       <Typography variant={"h2"} color = {"#333"} textAlign={'center'}  >
@@ -352,6 +440,10 @@ Quantity: {
 </Stack>
 
     </Box>
+
+    <Box>
+       
+      </Box>
   
     </Box>
   );
