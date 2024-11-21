@@ -10,17 +10,17 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@emotion/react": "^11.13.0",
-    "@emotion/styled": "^11.13.0",
+    "@emotion/react": "^11.13.5",
+    "@emotion/styled": "^11.13.5",
     "@langchain/openai": "^0.2.5",
-    "@mui/material": "^5.16.5",
+    "@mui/material": "^5.16.7",
     "dotenv": "^16.4.5",
     "firebase": "^10.12.4",
     "fs": "^0.0.1-security",
     "next": "14.2.5",
     "openai": "^4.0.0",
     "react": "^18",
-   
+    "react-camera-pro": "^1.4.0",
     "react-dom": "^18",
     "react-html5-camera-photo": "^1.5.11"
   },
