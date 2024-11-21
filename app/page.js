@@ -25,6 +25,8 @@ import { Camera, IMAGE_TYPES } from "react-html5-camera-photo";
 //import MyCameraComponent from "./MyCameraComponent";
 import { describeImage } from "./openai";
 import "react-html5-camera-photo/build/css/index.css";
+//import {Camera} from "react-camera-pro";
+
 
 const style = {
   position: "absolute",
@@ -259,7 +261,7 @@ export default function Home() {
         </Box>
       </Modal>
 
-      {isOn && (
+      {/* {isOn && (
         <Camera
           onTakePhoto={(dataUri) => {
             if (dataUri) {
@@ -272,11 +274,13 @@ export default function Home() {
           imageType={IMAGE_TYPES.JPG}
           imageCompression={0}
         />
-      )}
+      )} */}
 
-      <Button variant="outlined" minheight="10px" onClick={toggleCamera}>
+
+
+      {/* <Button variant="outlined" minheight="10px" onClick={toggleCamera}>
         {isOn ? "Turn Camera Off" : "Turn Camera On to Add Items"}
-      </Button>
+      </Button> */}
 
       <Box
         sx={{
