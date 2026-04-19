@@ -1,7 +1,7 @@
 "use client";
 import { Box, Typography, Button } from "@mui/material";
 import Stack from "@mui/material/Stack";
-import { firestore } from "@/firebase";
+import { firestore, auth } from "@/firebase";
 import {
   collection,
   query,
@@ -15,6 +15,8 @@ import { useEffect, useState, useRef } from "react";
 import Modal from "@mui/material/Modal";
 import TextField from "@mui/material/TextField";
 import { generateRecipes } from "./action";
+import { useAuthState } from "react-firebase-hooks/auth";
+
 
 import { green } from "@mui/material/colors";
 
@@ -25,6 +27,8 @@ import { Camera, IMAGE_TYPES } from "react-html5-camera-photo";
 //import MyCameraComponent from "./MyCameraComponent";
 import { describeImage } from "./openai";
 import "react-html5-camera-photo/build/css/index.css";
+import Login from "./components/Login";
+import { signOut } from "firebase/auth";
 //import {Camera} from "react-camera-pro";
 
 
@@ -87,17 +91,24 @@ export default function Home() {
 
   const startCamera = () => setIsCameraOn(true);
   const stopCamera = () => setIsCameraOn(false);
+  const [user, userLoading, error] = useAuthState(auth);
 
   const onSubmit = async () => {
-    try {
-      let r = await generateRecipes(pantry);
+    const res = await fetch("/api/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json"},
+      body: JSON.stringify({ pantryItems: pantry} )
+    })
 
-      console.log(r);
-      setRecipes(r);
-    } catch (error) {
-      console.error("Error generating recipes:", error);
-    }
+    const data = await res.json()
+    console.log(data.result)
+    setRecipes(data.result)
+    console.log("Recipes 3", recipes)
+
+
   };
+
+  
 
   const filteredItems = pantry.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -127,7 +138,7 @@ export default function Home() {
   };
 
   const updatePantry = async () => {
-    const snapshot = query(collection(firestore, "pantry"));
+    const snapshot = query(collection(firestore, "users", user.uid, "pantry"));
     const docs = await getDocs(snapshot);
     const pantryList = [];
     docs.forEach((doc) => {
@@ -137,12 +148,19 @@ export default function Home() {
     setPantry(pantryList);
   };
 
+  const logOut = async() => {
+
+    await signOut(auth)
+
+  }
+
   useEffect(() => {
-    updatePantry();
-  }, []);
+  if (!user) return;
+  updatePantry();
+}, [user]);
 
   const addItem = async (item) => {
-    const docRef = doc(collection(firestore, "pantry"), item);
+    const docRef = doc(firestore, "users", user.uid, "pantry", item);
     const docSnap = await getDoc(docRef);
     //const value = inputRef.current.value
     //if(value === "") return
@@ -151,7 +169,7 @@ export default function Home() {
       await setDoc(docRef, { count: count + 1 });
 
       setItems("");
-      return;
+     
     } else {
       await setDoc(docRef, { count: 1 });
       setItems("");
@@ -163,20 +181,27 @@ export default function Home() {
   };
 
   const DeleteItem = async (item) => {
-    const docRef = doc(firestore, "pantry", item);
+    const docRef = doc(firestore, "users", user.uid, "pantry", item);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       const { count } = docSnap.data();
       if (count === 1) {
         await deleteDoc(docRef);
+        setItems("");
       } else {
         await setDoc(docRef, { count: count - 1 });
+        setItems("");
       }
       await updatePantry();
     }
   };
 
   return (
+    <div>
+      {!user && userLoading && <h1>Loading</h1>}
+      {!user && !userLoading && <Login>s</Login>}
+      {user && !userLoading && (
+    
     <Box
       width="100vw"
       height="100vh"
@@ -185,6 +210,7 @@ export default function Home() {
       flexDirection={"column"}
       gap={2}
     >
+    
       <Typography
         variant="h3"
         sx={{
@@ -195,6 +221,7 @@ export default function Home() {
           MozTextFillColor: "transparent",
         }}
       >
+        
         AI Pantry React Web Application
       </Typography>
       <Box
@@ -343,6 +370,14 @@ export default function Home() {
                 </Typography>
               </Box>
 
+               <Button
+                variant="contained"
+                sx={{ marginRight: "20px" }}
+                onClick={() => addItem(name)}
+              >
+                Add Count
+              </Button>
+
               <Button
                 variant="contained"
                 sx={{ marginRight: "20px" }}
@@ -407,7 +442,13 @@ export default function Home() {
         </Stack>
       </Box>
 
-      <Box></Box>
+      <Button variant="contained" onClick={logOut}>
+        LogOut
+      </Button>
+
+   
     </Box>
+      )}
+    </div>
   );
 }
