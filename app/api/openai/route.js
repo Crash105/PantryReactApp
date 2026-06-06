@@ -7,21 +7,30 @@ const openai = new OpenAI({
 });
 
 export async function POST(prompt) {
+  let pantryItems;
 
- const {pantryItems} = await prompt.json()
-  console.log("Received pantryItems:", pantryItems) 
+  try {
+    const body = await prompt.json();
+    pantryItems = body.pantryItems;
+  } catch {
+    return Response.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  if (!pantryItems || pantryItems.length === 0) {
+    return Response.json({ error: "Pantry is empty. Add items before generating recipes." }, { status: 400 });
+  }
 
   const pantryNames = pantryItems.map((item) => item.name).join(", ");
-  console.log("Pantry Items", pantryNames)
+
   const fullPrompt = `
   You are given the following pantry ingredients: ${pantryNames}.
-  
+
   Generate exactly 2 creative and unique recipes using some or all of these ingredients.
-  
+
   Rules:
   - Only use ingredients that exist in the pantry list
   - Each recipe must have a name and a short appetizing description
-  
+
   Return a JSON object with a key called "result" containing an array of exactly 2 objects in this format:
 {
   "result": [
@@ -29,23 +38,31 @@ export async function POST(prompt) {
     { "name": "Recipe Name", "description": "Recipe description" }
   ]
 }
-`
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    response_format: {type: "json_object"},
-    temperature: 1.5,
-    messages: [
-    
-      {
-        role: "user",
-        content: `Generate 2 recipes based on this prompt:  ${fullPrompt}`
-      },
-    ],
-  });
+`;
 
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
+      temperature: 1.0,
+      messages: [
+        {
+          role: "user",
+          content: `Generate 2 recipes based on this prompt: ${fullPrompt}`,
+        },
+      ],
+    });
 
-  const answer = response.choices[0].message.content;
-  const parsed = JSON.parse(answer)
+    const answer = response.choices[0].message.content;
+    const parsed = JSON.parse(answer);
 
-  return Response.json({ result: parsed.result })
+    if (!parsed.result || !Array.isArray(parsed.result)) {
+      return Response.json({ error: "Unexpected response format from AI." }, { status: 500 });
+    }
+
+    return Response.json({ result: parsed.result });
+  } catch (err) {
+    console.error("OpenAI error:", err.message);
+    return Response.json({ error: "Failed to generate recipes. Please try again." }, { status: 500 });
+  }
 }

@@ -4,6 +4,7 @@ import { auth, firestore } from "@/firebase";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { setDoc, doc } from "firebase/firestore";
 import { Box, Button, Container, Paper, Typography } from "@mui/material";
+import { useState } from "react";
 
 // Using a standard Google icon style (or you can use @mui/icons-material/Google)
 const GoogleIcon = () => (
@@ -16,17 +17,19 @@ const GoogleIcon = () => (
 );
 
 export default function Login() {
-  async function signInWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    const userCredentials = await signInWithPopup(auth, provider);
-    const user = userCredentials.user;
+  const [error, setError] = useState("");
 
-    const docRef = doc(firestore, "users", user.uid);
-    await setDoc(
-      docRef,
-      { name: user.displayName, email: user.email },
-      { merge: true }
-    );
+  async function signInWithGoogle() {
+    try {
+      setError("");
+      const provider = new GoogleAuthProvider();
+      const userCredentials = await signInWithPopup(auth, provider);
+      const user = userCredentials.user;
+      const docRef = doc(firestore, "users", user.uid);
+      await setDoc(docRef, { name: user.displayName, email: user.email }, { merge: true });
+    } catch (err) {
+      setError("Sign in failed. Please try again.");
+    }
   }
 
   return (
@@ -57,6 +60,7 @@ export default function Login() {
           <GoogleIcon />
           Sign in with Google
         </Button>
+        {error && <Typography variant="body2" color="error" sx={{ mt: 2 }}>{error}</Typography>}
       </Paper>
     </Container>
   );
