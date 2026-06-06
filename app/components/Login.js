@@ -23,11 +23,13 @@ export default function Login() {
     try {
       setError("");
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
       const userCredentials = await signInWithPopup(auth, provider);
       const user = userCredentials.user;
       const docRef = doc(firestore, "users", user.uid);
       await setDoc(docRef, { name: user.displayName, email: user.email }, { merge: true });
     } catch (err) {
+      console.error("Auth error:", err.code, err.message);
       setError("Sign in failed. Please try again.");
     }
   }

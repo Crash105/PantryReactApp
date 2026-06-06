@@ -4,18 +4,16 @@ import Stack from "@mui/material/Stack";
 import { firestore, auth } from "@/firebase";
 import {
   collection,
-  query,
   getDocs,
   setDoc,
   doc,
   deleteDoc,
   getDoc,
 } from "firebase/firestore";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import Modal from "@mui/material/Modal";
 import TextField from "@mui/material/TextField";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { green } from "@mui/material/colors";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Login from "./components/Login";
@@ -41,7 +39,6 @@ export default function Home() {
 
   function handleInputChange(event) {
     setItems(event.target.value);
-    console.log(event.target.value);
   }
 
   const [open, setOpen] = useState(false);
@@ -52,93 +49,106 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [recipes, setRecipes] = useState([]);
   const [recipeError, setRecipeError] = useState(null);
-  const inputRef = useRef();
   const [user, userLoading, error] = useAuthState(auth);
   const [recipesloading, setRecipesLoading] = useState(false)
+  const [pantryError, setPantryError] = useState(null)
+  const [pantryLoading, setPantryLoading] = useState(false)
 
   const onSubmit = async () => {
 
 
     try {
-    setRecipesLoading(true)
-    setRecipeError(null);
-    const res = await fetch("/api/openai", {
-      method: "POST",
-      headers: { "Content-Type": "application/json"},
-      body: JSON.stringify({ pantryItems: pantry} )
-    })
-    if (!res.ok) throw new Error(`Recipe generation failed (${res.status})`);
-    const data = await res.json()
-    setRecipes(data.result)
-    setRecipesLoading(false)
-  } catch(err) {
-    setRecipeError(err.message)
-  }
+      setRecipesLoading(true);
+      setRecipeError(null);
+      const res = await fetch("/api/openai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pantryItems: pantry }),
+      });
+      if (!res.ok) throw new Error(`Recipe generation failed (${res.status})`);
+      const data = await res.json();
+      setRecipes(data.result);
+    } catch (err) {
+      setRecipeError(err.message);
+    } finally {
+      setRecipesLoading(false);
+    }
 
   };
+
+  const pantryCollection = () => collection(firestore, "users", user.uid, "pantry");
 
   const filteredItems = pantry.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const updatePantry = async () => {
-    const snapshot = query(collection(firestore, "users", user.uid, "pantry"));
+    setPantryLoading(true);
+    const snapshot = pantryCollection();
     const docs = await getDocs(snapshot);
     const pantryList = [];
     docs.forEach((doc) => {
       pantryList.push({ name: doc.id, ...doc.data() });
     });
-    console.log(pantryList);
     setPantry(pantryList);
+    setPantryLoading(false);
   };
 
-  const logOut = async() => {
-    await signOut(auth)
-  }
+  const logOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      setPantryError(err.message);
+    }
+  };
 
   useEffect(() => {
-  if (!user) return;
-  updatePantry();
-}, [user]);
+    if (!user) return;
+    updatePantry().catch((err) => setPantryError(err.message));
+  }, [user]);
 
   const addItem = async (item) => {
-    const normalized = item.toLowerCase()
-    const capitalized = normalized.charAt(0).toUpperCase() + normalized.slice(1)
-
-    const docRef = doc(firestore, "users", user.uid, "pantry", capitalized);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const { count } = docSnap.data();
-      await setDoc(docRef, { count: count + 1 });
-
-      setItems("");
-     
-    } else {
-      await setDoc(docRef, { count: 1 });
-      setItems("");
-    }
-
-    await updatePantry();
-  };
-
-  const DeleteItem = async (item) => {
-    const docRef = doc(firestore, "users", user.uid, "pantry", item);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const { count } = docSnap.data();
-      if (count === 1) {
-        await deleteDoc(docRef);
-        
+    if (!item.trim()) return;
+    setPantryError(null);
+    try {
+      const normalized = item.trim().toLowerCase();
+      const capitalized = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+      const docRef = doc(pantryCollection(), capitalized);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const { count } = docSnap.data();
+        await setDoc(docRef, { count: count + 1 });
       } else {
-        await setDoc(docRef, { count: count - 1 });
-        
+        await setDoc(docRef, { count: 1 });
       }
       setItems("");
       await updatePantry();
+    } catch (err) {
+      setPantryError(err.message);
+    }
+  };
+
+  const deleteItem = async (item) => {
+    setPantryError(null);
+    try {
+      const docRef = doc(pantryCollection(), item);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const { count } = docSnap.data();
+        if (count === 1) {
+          await deleteDoc(docRef);
+        } else {
+          await setDoc(docRef, { count: count - 1 });
+        }
+        await updatePantry();
+      }
+    } catch (err) {
+      setPantryError(err.message);
     }
   };
 
   if (userLoading) return <h1>Loading</h1>;
+  if (error) return <h1>Something went wrong. Please refresh the page.</h1>;
   if (!user) return <Login />;
  
 
@@ -171,7 +181,10 @@ export default function Home() {
      
       <Typography variant="h5">Welcome, {user.displayName}</Typography>
 
-      {pantry.length === 0 && (
+      {pantryLoading && (
+        <Typography variant="h6">Loading pantry...</Typography>
+      )}
+      {!pantryLoading && pantry.length === 0 && (
         <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
           <Typography variant="h6">Your pantry is empty — add your first item</Typography>
           <Button variant="contained" onClick={handleOpen}>Add Item</Button>
@@ -192,7 +205,6 @@ export default function Home() {
       >
         <TextField
           id="outlined-basic"
-          ref={inputRef}
           label="Search Items in Pantry"
           variant="outlined"
           value={searchQuery}
@@ -231,7 +243,7 @@ export default function Home() {
               minheight="10px"
               value={items}
               onChange={handleInputChange}
-              ref={inputRef}
+              autoFocus
             />
             <Button
               variant="outlined"
@@ -320,7 +332,7 @@ export default function Home() {
               <Button
                 variant="contained"
                 sx={{ marginRight: "20px" }}
-                onClick={() => DeleteItem(name)}
+                onClick={() => deleteItem(name)}
               >
                 Delete
               </Button>
@@ -340,6 +352,11 @@ export default function Home() {
           {recipeError}
         </Typography>
       )}
+      {pantryError && (
+        <Typography color="error" variant="body2">
+          {pantryError}
+        </Typography>
+      )}
 
       <Box
         sx={{
@@ -356,7 +373,7 @@ export default function Home() {
           height="200px"
           spacing={2}
           direction={"row"}
-          color={green}
+          color="green"
           overflow={"auto"}
         >
           {recipes.length > 0 &&
@@ -388,10 +405,6 @@ export default function Home() {
             ))}
         </Stack>
       </Box>
-
-      
-
-   
     </Box>
     </div>
   );
