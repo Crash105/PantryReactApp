@@ -1,7 +1,7 @@
 "use client";
 
 import { auth, firestore } from "@/firebase";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { signInWithPopup, GoogleAuthProvider, signInAnonymously } from "firebase/auth";
 import { setDoc, doc } from "firebase/firestore";
 import { Box, Button, Container, Paper, Typography } from "@mui/material";
 import { useState } from "react";
@@ -19,15 +19,27 @@ const GoogleIcon = () => (
 export default function Login() {
   const [error, setError] = useState("");
 
+  async function signInAsGuest() {
+    try {
+      setError("");
+      await signInAnonymously(auth);
+    } catch (err) {
+      console.error("Guest auth error:", err.code, err.message);
+      setError("Could not sign in as guest. Please try again.");
+    }
+  }
+
   async function signInWithGoogle() {
     try {
       setError("");
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
       const userCredentials = await signInWithPopup(auth, provider);
       const user = userCredentials.user;
       const docRef = doc(firestore, "users", user.uid);
       await setDoc(docRef, { name: user.displayName, email: user.email }, { merge: true });
     } catch (err) {
+      console.error("Auth error:", err.code, err.message);
       setError("Sign in failed. Please try again.");
     }
   }
@@ -59,6 +71,14 @@ export default function Login() {
         >
           <GoogleIcon />
           Sign in with Google
+        </Button>
+        <Button
+          variant="text"
+          fullWidth
+          onClick={signInAsGuest}
+          sx={{ textTransform: 'none', mt: 1, color: 'text.secondary' }}
+        >
+          Try as Guest
         </Button>
         {error && <Typography variant="body2" color="error" sx={{ mt: 2 }}>{error}</Typography>}
       </Paper>

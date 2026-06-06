@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint app"
   },
   "dependencies": {
     "@emotion/react": "^11.13.5",
@@ -21,7 +21,8 @@
     "react-firebase-hooks": "^5.1.1"
   },
   "devDependencies": {
-    "eslint": "^8",
-    "eslint-config-next": "14.2.5"
+    "@eslint/eslintrc": "^3.3.5",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.7"
   }
 }
