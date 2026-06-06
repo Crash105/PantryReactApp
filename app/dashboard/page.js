@@ -10,7 +10,7 @@ import {
   deleteDoc,
   getDoc,
 } from "firebase/firestore";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Modal from "@mui/material/Modal";
 import TextField from "@mui/material/TextField";
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -89,9 +89,9 @@ export default function Home() {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const updatePantry = async () => {
+  const updatePantry = useCallback(async () => {
     setPantryLoading(true);
-    const snapshot = pantryCollection();
+    const snapshot = collection(firestore, "users", user.uid, "pantry");
     const docs = await getDocs(snapshot);
     const pantryList = [];
     docs.forEach((doc) => {
@@ -99,7 +99,7 @@ export default function Home() {
     });
     setPantry(pantryList);
     setPantryLoading(false);
-  };
+  }, [user]);
 
   const logOut = async () => {
     try {
@@ -111,8 +111,9 @@ export default function Home() {
 
   useEffect(() => {
     if (!user) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     updatePantry().catch((err) => setPantryError(err.message));
-  }, [user]);
+  }, [user, updatePantry]);
 
   const addItem = async (item) => {
     if (!item.trim()) return;
