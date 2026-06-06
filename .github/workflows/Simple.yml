@@ -10,9 +10,6 @@ jobs:
   lintTest:
     name: Lint
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: PantryReactApp
     steps:
       - name: Clone Repository
         uses: actions/checkout@v4
@@ -22,7 +19,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: PantryReactApp/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install Dependencies
         run: npm install
