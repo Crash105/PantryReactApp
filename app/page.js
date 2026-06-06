@@ -14,22 +14,13 @@ import {
 import { useEffect, useState, useRef } from "react";
 import Modal from "@mui/material/Modal";
 import TextField from "@mui/material/TextField";
-import { generateRecipes } from "./action";
 import { useAuthState } from "react-firebase-hooks/auth";
-
-
 import { green } from "@mui/material/colors";
-
 import Card from "@mui/material/Card";
-import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
-import { Camera, IMAGE_TYPES } from "react-html5-camera-photo";
-//import MyCameraComponent from "./MyCameraComponent";
-import { describeImage } from "./openai";
-import "react-html5-camera-photo/build/css/index.css";
 import Login from "./components/Login";
 import { signOut } from "firebase/auth";
-//import {Camera} from "react-camera-pro";
+
 
 
 const style = {
@@ -44,28 +35,9 @@ const style = {
   p: 4,
 };
 
-const style1 = {
-  position: "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  width: "800px",
-  height: "600px",
-
-  bgcolor: "background.paper",
-
-  display: "flex",
-  flexDirection: "column",
-};
 
 export default function Home() {
-  function handleTakePhoto(dataUri) {
-    // Do stuff with the photo...
-    console.log("HandTakePhoto Function Iniated");
 
-    setUri(dataUri);
-    imageUpload1();
-  }
 
   function handleInputChange(event) {
     setItems(event.target.value);
@@ -74,68 +46,40 @@ export default function Home() {
 
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+  const handleClose = () => { setOpen(false); setItems(""); };
   const [items, setItems] = useState("");
   const [pantry, setPantry] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [recipes, setRecipes] = useState([]);
+  const [recipeError, setRecipeError] = useState(null);
   const inputRef = useRef();
-  const camera = useRef(null);
-  const [image, setImage] = useState(null);
-  const [uri, setUri] = useState(null);
-
-  const [isOn, setIsOn] = useState(false);
-  const [finuri, setfinUru] = useState("");
-
-  const [isCameraOn, setIsCameraOn] = useState(false);
-
-  const startCamera = () => setIsCameraOn(true);
-  const stopCamera = () => setIsCameraOn(false);
   const [user, userLoading, error] = useAuthState(auth);
+  const [recipesloading, setRecipesLoading] = useState(false)
 
   const onSubmit = async () => {
+
+
+    try {
+    setRecipesLoading(true)
+    setRecipeError(null);
     const res = await fetch("/api/openai", {
       method: "POST",
       headers: { "Content-Type": "application/json"},
       body: JSON.stringify({ pantryItems: pantry} )
     })
-
+    if (!res.ok) throw new Error(`Recipe generation failed (${res.status})`);
     const data = await res.json()
-    console.log(data.result)
     setRecipes(data.result)
-    console.log("Recipes 3", recipes)
-
+    setRecipesLoading(false)
+  } catch(err) {
+    setRecipeError(err.message)
+  }
 
   };
-
-  
 
   const filteredItems = pantry.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  function handleCameraStart(stream) {
-    console.log("handleCameraStart");
-  }
-
-  function handleCameraStop() {
-    console.log("handleCameraStop");
-  }
-
-  const toggleCamera = () => {
-    setIsOn(!isOn);
-  };
-
-  const imageUpload1 = async () => {
-    console.log("Image Upload");
-    console.log("URI:", uri); //
-
-    try {
-      let result = await describeImage(uri);
-      console.log(result);
-      addItem(result);
-    } catch {}
-  };
 
   const updatePantry = async () => {
     const snapshot = query(collection(firestore, "users", user.uid, "pantry"));
@@ -149,9 +93,7 @@ export default function Home() {
   };
 
   const logOut = async() => {
-
     await signOut(auth)
-
   }
 
   useEffect(() => {
@@ -160,10 +102,11 @@ export default function Home() {
 }, [user]);
 
   const addItem = async (item) => {
-    const docRef = doc(firestore, "users", user.uid, "pantry", item);
+    const normalized = item.toLowerCase()
+    const capitalized = normalized.charAt(0).toUpperCase() + normalized.slice(1)
+
+    const docRef = doc(firestore, "users", user.uid, "pantry", capitalized);
     const docSnap = await getDoc(docRef);
-    //const value = inputRef.current.value
-    //if(value === "") return
     if (docSnap.exists()) {
       const { count } = docSnap.data();
       await setDoc(docRef, { count: count + 1 });
@@ -175,8 +118,6 @@ export default function Home() {
       setItems("");
     }
 
-    //inputRef.current.value = ""
-
     await updatePantry();
   };
 
@@ -187,20 +128,23 @@ export default function Home() {
       const { count } = docSnap.data();
       if (count === 1) {
         await deleteDoc(docRef);
-        setItems("");
+        
       } else {
         await setDoc(docRef, { count: count - 1 });
-        setItems("");
+        
       }
+      setItems("");
       await updatePantry();
     }
   };
 
+  if (userLoading) return <h1>Loading</h1>;
+  if (!user) return <Login />;
+ 
+
   return (
     <div>
-      {!user && userLoading && <h1>Loading</h1>}
-      {!user && !userLoading && <Login>s</Login>}
-      {user && !userLoading && (
+    
     
     <Box
       width="100vw"
@@ -222,17 +166,27 @@ export default function Home() {
         }}
       >
         
-        AI Pantry React Web Application
+        Mealwise
       </Typography>
+     
+      <Typography variant="h5">Welcome, {user.displayName}</Typography>
+
+      {pantry.length === 0 && (
+        <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
+          <Typography variant="h6">Your pantry is empty — add your first item</Typography>
+          <Button variant="contained" onClick={handleOpen}>Add Item</Button>
+        </Box>
+      )}
+
       <Box
         justifyContent="space-between"
         sx={{
           width: {
-            xs: "100%", // 100% width on extra-small screens
-            sm: "80%", // 80% width on small screens
-            md: "70%", // 70% width on medium screens
-            lg: "60%", // 60% width on large screens
-            xl: "50%", // 50% width on extra-large screens
+            xs: "100%",
+            sm: "80%",
+            md: "70%",
+            lg: "60%",
+            xl: "50%",
           },
         }}
       >
@@ -244,17 +198,21 @@ export default function Home() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           sx={{
-            width: "100%", // take full width of the Box
-            minHeight: "10px",
-            border: "2px solid #333",
-            boxSizing: "border-box",
-            borderRadius: "20px",
+            width: "100%",
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "20px",
+              "& fieldset": {
+                border: "2px solid #333",
+              },
+            },
           }}
         />
       </Box>
-      <Button variant="contained" onClick={handleOpen}>
-        Add Items by Typing
-      </Button>
+      {pantry.length > 0 && (
+        <Button variant="contained" onClick={handleOpen}>
+          Add Items by Typing
+        </Button>
+      )}
       <Modal
         open={open}
         onClose={handleClose}
@@ -288,26 +246,7 @@ export default function Home() {
         </Box>
       </Modal>
 
-      {/* {isOn && (
-        <Camera
-          onTakePhoto={(dataUri) => {
-            if (dataUri) {
-              handleTakePhoto(dataUri);
-            } else {
-              handleTakePhoto("fruit");
-              // Handle the error appropriately
-            }
-          }}
-          imageType={IMAGE_TYPES.JPG}
-          imageCompression={0}
-        />
-      )} */}
 
-
-
-      {/* <Button variant="outlined" minheight="10px" onClick={toggleCamera}>
-        {isOn ? "Turn Camera Off" : "Turn Camera On to Add Items"}
-      </Button> */}
 
       <Box
         sx={{
@@ -390,9 +329,17 @@ export default function Home() {
         </Stack>
       </Box>
 
-      <Button variant="contained" onClick={onSubmit}>
-        Generate Recipes
+      <Button variant="contained" onClick={onSubmit} disabled={recipesloading || pantry.length === 0}>
+        {recipesloading ? 'Generating Recipes...' : 'Generate Recipes'}
       </Button>
+      <Button variant="contained" onClick={logOut}>
+        LogOut
+      </Button>
+      {recipeError && (
+        <Typography color="error" variant="body2">
+          {recipeError}
+        </Typography>
+      )}
 
       <Box
         sx={{
@@ -442,13 +389,10 @@ export default function Home() {
         </Stack>
       </Box>
 
-      <Button variant="contained" onClick={logOut}>
-        LogOut
-      </Button>
+      
 
    
     </Box>
-      )}
     </div>
   );
 }
