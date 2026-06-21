@@ -47,36 +47,38 @@ export default function Login() {
   return (
     <Container maxWidth="xs" sx={{ mt: 8 }}>
       <Paper elevation={3} sx={{ p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', borderRadius: 2 }}>
-        <Typography variant="h5" fontWeight="bold" gutterBottom>
-          Welcome Back
+        <Typography
+          variant="h5"
+          fontWeight="bold"
+          gutterBottom
+          sx={{
+            background: "linear-gradient(90deg, #0000FF, #00FFFF)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            MozBackgroundClip: "text",
+            MozTextFillColor: "transparent",
+          }}
+        >
+          Mealwise
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Sign in to your account to continue
         </Typography>
-        
+
         <Button
-          variant="outlined"
+          variant="contained"
           fullWidth
           onClick={signInWithGoogle}
-          sx={{
-            textTransform: 'none',
-            py: 1.2,
-            borderColor: 'divider',
-            color: 'text.primary',
-            '&:hover': {
-              borderColor: 'text.primary',
-              backgroundColor: 'action.hover'
-            }
-          }}
+          sx={{ textTransform: 'none', py: 1.2 }}
         >
           <GoogleIcon />
           Sign in with Google
         </Button>
         <Button
-          variant="text"
+          variant="outlined"
           fullWidth
           onClick={signInAsGuest}
-          sx={{ textTransform: 'none', mt: 1, color: 'text.secondary' }}
+          sx={{ textTransform: 'none', mt: 1 }}
         >
           Try as Guest
         </Button>

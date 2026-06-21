@@ -16,8 +16,12 @@ export default function LandingPage() {
   const router = useRouter();
 
   async function handleGuestSignIn() {
-    await signInAnonymously(auth);
-    router.push("/dashboard");
+    try {
+      await signInAnonymously(auth);
+      router.push("/dashboard");
+    } catch (err) {
+      console.error("Guest sign-in failed:", err.message);
+    }
   }
 
   return (

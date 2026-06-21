@@ -67,9 +67,13 @@ export default function Home() {
     try {
       setRecipesLoading(true);
       setRecipeError(null);
+      const token = await user.getIdToken();
       const res = await fetch("/api/openai", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
         body: JSON.stringify({ pantryItems: pantry }),
       });
       if (!res.ok) throw new Error(`Recipe generation failed (${res.status})`);
@@ -91,14 +95,20 @@ export default function Home() {
 
   const updatePantry = useCallback(async () => {
     setPantryLoading(true);
-    const snapshot = collection(firestore, "users", user.uid, "pantry");
-    const docs = await getDocs(snapshot);
-    const pantryList = [];
-    docs.forEach((doc) => {
-      pantryList.push({ name: doc.id, ...doc.data() });
-    });
-    setPantry(pantryList);
-    setPantryLoading(false);
+    setPantryError(null);
+    try {
+      const snapshot = collection(firestore, "users", user.uid, "pantry");
+      const docs = await getDocs(snapshot);
+      const pantryList = [];
+      docs.forEach((doc) => {
+        pantryList.push({ name: doc.id, ...doc.data() });
+      });
+      setPantry(pantryList);
+    } catch (err) {
+      setPantryError("Failed to load pantry. Please refresh the page.");
+    } finally {
+      setPantryLoading(false);
+    }
   }, [user]);
 
   const logOut = async () => {
@@ -112,15 +122,24 @@ export default function Home() {
   useEffect(() => {
     if (!user) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    updatePantry().catch((err) => setPantryError(err.message));
+    updatePantry();
   }, [user, updatePantry]);
 
   const addItem = async (item) => {
     if (!item.trim()) return;
+    if (item.includes("/")) {
+      setPantryError("Item name cannot contain '/'.");
+      return;
+    }
+    if(item.length > 50) {
+      setPantryError("Item name cannot be more than 50 charactesrs");
+      return
+    }
     setPantryError(null);
     try {
       const normalized = item.trim().toLowerCase();
       const capitalized = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+      
       const docRef = doc(pantryCollection(), capitalized);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
@@ -187,9 +206,9 @@ export default function Home() {
         Mealwise
       </Typography>
      
-      <Typography variant="h5">Welcome, {user.displayName}</Typography>
+      <Typography variant="h5">Welcome, {user.displayName || "Guest"}</Typography>
 
-      {pantryLoading && (
+      {pantryLoading && pantry.length === 0 && (
         <Typography variant="h6">Loading pantry...</Typography>
       )}
       {!pantryLoading && pantry.length === 0 && (
@@ -288,7 +307,7 @@ export default function Home() {
           // center the box horizontally
         }}
       >
-        <Box bgcolor={"f0f0f0"} textAlign={"center"}>
+        <Box bgcolor={"#f0f0f0"} textAlign={"center"}>
           <Typography variant={"h2"} color={"#333"} textAlign={"center"}>
             Pantry Items
           </Typography>
@@ -349,9 +368,15 @@ export default function Home() {
         </Stack>
       </Box>
 
-      <Button variant="contained" onClick={onSubmit} disabled={recipesloading || pantry.length === 0}>
-        {recipesloading ? 'Generating Recipes...' : 'Generate Recipes'}
-      </Button>
+      {user.isAnonymous ? (
+        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
+          Sign in with Google to generate recipes.
+        </Typography>
+      ) : (
+        <Button variant="contained" onClick={onSubmit} disabled={recipesloading || pantry.length === 0}>
+          {recipesloading ? 'Generating Recipes...' : 'Generate Recipes'}
+        </Button>
+      )}
       <Button variant="contained" onClick={logOut}>
         LogOut
       </Button>
@@ -377,7 +402,7 @@ export default function Home() {
           },
         }}
       >
-        <Stack
+<Stack
           height="200px"
           spacing={2}
           direction={"row"}
@@ -385,14 +410,14 @@ export default function Home() {
           overflow={"auto"}
         >
           {recipes.length > 0 &&
-            recipes.map((recipe, index) => (
+            recipes.map((recipe) => (
               <Box
                 width="100%"
                 minHeight="250px"
                 display="flex"
                 alignItems="center"
                 flexGrow={0}
-                key={index}
+                key={recipe.name}
               >
                 <Card variant="outlined">
                   <CardContent>
